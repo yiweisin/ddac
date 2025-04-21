@@ -1,3 +1,4 @@
+// frontend/src/app/stocks/[id]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -7,6 +8,7 @@ import {
   getStockHistory,
   getStockPrices,
   createTrade,
+  createPriceAlert,
 } from "@/lib/api";
 import { Stock } from "@/types/stock";
 import {
@@ -21,24 +23,13 @@ import {
 } from "recharts";
 
 export default function StockDetailPage() {
-  // CSS for animations
-  const animationStyles = `
-    @keyframes fade-in {
-      from { opacity: 0; transform: translate(-50%, -20px); }
-      to { opacity: 1; transform: translate(-50%, 0); }
-    }
-    .animate-fade-in {
-      animation: fade-in 0.3s ease-out forwards;
-    }
-  `;
-
   const params = useParams();
   const router = useRouter();
   const stockId = Number(params.id);
 
   const [stock, setStock] = useState<Stock | null>(null);
   const [priceHistory, setPriceHistory] = useState<
-    { date: string; price: number }[]
+    Array<{ date: string; price: number }>
   >([]);
   const [weeklyChange, setWeeklyChange] = useState<number | null>(null);
   const [threeDayChange, setThreeDayChange] = useState<number | null>(null);
@@ -50,6 +41,25 @@ export default function StockDetailPage() {
   );
   const [showBuySuccess, setShowBuySuccess] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+
+  // Alert dialog state
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [alertPrice, setAlertPrice] = useState("");
+  const [alertType, setAlertType] = useState<"above" | "below">("above");
+  const [creatingAlert, setCreatingAlert] = useState(false);
+  const [alertError, setAlertError] = useState<string | null>(null);
+  const [alertSuccess, setAlertSuccess] = useState<string | null>(null);
+
+  // CSS for animations
+  const animationStyles = `
+    @keyframes fade-in {
+      from { opacity: 0; transform: translate(-50%, -20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .animate-fade-in {
+      animation: fade-in 0.3s ease-out forwards;
+    }
+  `;
 
   // Initial data load
   useEffect(() => {
@@ -98,7 +108,7 @@ export default function StockDetailPage() {
 
   // Calculate percentage changes based on the price history
   const calculatePercentageChanges = (
-    history: { date: string; price: number }[]
+    history: Array<{ date: string; price: number }>
   ) => {
     if (!history || history.length < 4) {
       // Need at least 4 data points for weekly change (assuming daily data)
@@ -144,8 +154,6 @@ export default function StockDetailPage() {
             // Also update percentage changes when price updates
             if (priceHistory.length > 0) {
               const updatedHistory = [...priceHistory];
-              // Update the latest history point or add a new one
-              // This depends on your implementation, here we're just recalculating
               calculatePercentageChanges(updatedHistory);
             }
           }
@@ -165,18 +173,69 @@ export default function StockDetailPage() {
   const handleBuyStock = async () => {
     setIsPurchasing(true);
     try {
-      if (stock)
+      if (stock) {
         await createTrade({
           stockId,
           entryPrice: stock.price,
           isHolding: true,
         });
+      }
       setIsPurchasing(false);
       setShowBuySuccess(true);
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setShowBuySuccess(false);
+      }, 3000);
     } catch (err) {
       setError("Failed to add trade");
       console.error(err);
+      setIsPurchasing(false);
     }
+  };
+
+  // Handle creating price alert
+  const handleCreateAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingAlert(true);
+    setAlertError(null);
+
+    try {
+      const price = parseFloat(alertPrice);
+      if (isNaN(price) || price <= 0) {
+        throw new Error("Please enter a valid price");
+      }
+
+      await createPriceAlert({
+        stockId,
+        targetPrice: price,
+        isAboveTarget: alertType === "above",
+      });
+
+      setAlertSuccess("Price alert created successfully");
+      setTimeout(() => {
+        setShowAlertDialog(false);
+        setAlertSuccess(null);
+        setAlertPrice("");
+      }, 1500);
+    } catch (err) {
+      setAlertError(
+        err instanceof Error ? err.message : "Failed to create alert"
+      );
+    } finally {
+      setCreatingAlert(false);
+    }
+  };
+
+  const handleAlertTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "above" || value === "below") {
+      setAlertType(value);
+    }
+  };
+
+  const handleAlertPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAlertPrice(e.target.value);
   };
 
   const renderPercentageChange = (value: number | null) => {
@@ -415,56 +474,80 @@ export default function StockDetailPage() {
                 </div>
               </div>
 
-              {/* One-Click Buy Button */}
-              <button
-                onClick={handleBuyStock}
-                disabled={isPurchasing}
-                className="mt-4 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-md transition-all flex items-center disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isPurchasing ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
+              <div className="mt-4 flex space-x-4">
+                {/* Buy Button */}
+                <button
+                  onClick={handleBuyStock}
+                  disabled={isPurchasing}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-md transition-all flex items-center disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isPurchasing ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
                         stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      ></path>
-                    </svg>
-                    Buy Now
-                  </>
-                )}
-              </button>
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        ></path>
+                      </svg>
+                      Buy Now
+                    </>
+                  )}
+                </button>
+
+                {/* Set Alert Button */}
+                <button
+                  onClick={() => setShowAlertDialog(true)}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-md transition-all flex items-center"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                  Set Alert
+                </button>
+              </div>
             </div>
 
             <div className="bg-slate-600/40 rounded-lg px-4 py-2 flex items-center">
@@ -554,12 +637,12 @@ export default function StockDetailPage() {
                   <YAxis
                     tick={{ fill: "#475569" }}
                     domain={[minPrice, maxPrice]}
-                    tickFormatter={(value) => `$${value.toFixed(2)}`}
+                    tickFormatter={(value) => `${value.toFixed(2)}`}
                   />
                   <Tooltip
                     formatter={(value) => {
                       if (typeof value === "number") {
-                        return [`$${value.toFixed(2)}`, "Price"];
+                        return [`${value.toFixed(2)}`, "Price"];
                       }
                       return [`${value}`, "Price"];
                     }}
@@ -624,7 +707,7 @@ export default function StockDetailPage() {
                 "No description available for this company."}
             </p>
 
-            {/* Additional company details could go here */}
+            {/* Additional company details */}
             <div className="grid grid-cols-2 gap-6 mt-8">
               <div className="border-l-4 border-indigo-500 pl-4">
                 <p className="text-xs text-slate-500 uppercase font-medium">
@@ -642,6 +725,132 @@ export default function StockDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Price Alert Dialog */}
+      {showAlertDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowAlertDialog(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+
+            <h3 className="text-xl font-semibold text-slate-800 mb-4">
+              Set Price Alert for {stock.symbol}
+            </h3>
+
+            {alertError && (
+              <div className="mb-4 bg-rose-50 border-l-4 border-rose-500 text-rose-700 p-3 rounded-md text-sm">
+                {alertError}
+              </div>
+            )}
+
+            {alertSuccess && (
+              <div className="mb-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 p-3 rounded-md text-sm">
+                {alertSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateAlert}>
+              <div className="mb-4">
+                <label
+                  htmlFor="alertPrice"
+                  className="block text-sm font-medium text-slate-700 mb-1"
+                >
+                  Alert me when price is
+                </label>
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        $
+                      </div>
+                      <input
+                        type="number"
+                        id="alertPrice"
+                        value={alertPrice}
+                        onChange={handleAlertPriceChange}
+                        step="0.01"
+                        min="0"
+                        className="pl-7 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5"
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <select
+                    value={alertType}
+                    onChange={handleAlertTypeChange}
+                    className="rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5"
+                  >
+                    <option value="above">Above</option>
+                    <option value="below">Below</option>
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Current price: ${stock.price.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAlertDialog(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingAlert}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center disabled:opacity-50"
+                >
+                  {creatingAlert ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Alert"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

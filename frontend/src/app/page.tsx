@@ -5,8 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { Trade } from "../types/trade";
-import { getTrades, getStocks, getStockPrices, sellTrade } from "../lib/api";
+import {
+  getTrades,
+  getStocks,
+  getStockPrices,
+  sellTrade,
+  getPriceAlerts,
+} from "../lib/api";
 import TradeItem from "@/components/TradeItem";
+import { PriceAlert } from "@/types/alert";
 
 // Define interfaces for API response types
 interface StockPrice {
@@ -20,6 +27,7 @@ export default function Home() {
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
@@ -35,13 +43,15 @@ export default function Home() {
       setLoading(true);
       setError(null);
 
-      const [tradesData, , stockPrices] = await Promise.all([
+      const [tradesData, , stockPrices, alertsData] = await Promise.all([
         getTrades(),
         getStocks(),
         getStockPrices(),
+        getPriceAlerts(),
       ]);
 
       setAllTrades(tradesData);
+      setAlerts(alertsData);
 
       const holdingTrades = tradesData.filter(
         (trade: Trade) => trade.isHolding
@@ -125,6 +135,7 @@ export default function Home() {
   };
 
   const activePositions = trades.length;
+  const activeAlerts = alerts.filter((alert) => !alert.isTriggered).length;
   const totalPnL = allTrades.reduce((sum, trade) => {
     if (!trade.isHolding) {
       return sum + trade.pnl;
@@ -230,14 +241,14 @@ export default function Home() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-8">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <div className="flex items-center">
-                <div className="mr-4 bg-indigo-400/20 rounded-lg p-3">
+                <div className="mr-4 bg-indigo-400/20 rounded-lg p-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -262,18 +273,18 @@ export default function Home() {
                   <span className="text-xs text-slate-300 uppercase font-medium">
                     Active Positions
                   </span>
-                  <p className="text-2xl font-bold mt-1">{activePositions}</p>
+                  <p className="text-xl font-bold mt-0.5">{activePositions}</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <div className="flex items-center">
-                <div className="mr-4 bg-emerald-400/20 rounded-lg p-3">
+                <div className="mr-4 bg-emerald-400/20 rounded-lg p-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -294,7 +305,7 @@ export default function Home() {
                     Total P&L
                   </span>
                   <p
-                    className={`text-2xl font-bold mt-1 ${
+                    className={`text-xl font-bold mt-0.5 ${
                       totalPnL >= 0 ? "text-emerald-400" : "text-rose-400"
                     }`}
                   >
@@ -307,11 +318,11 @@ export default function Home() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <div className="flex items-center">
-                <div className="mr-4 bg-blue-400/20 rounded-lg p-3">
+                <div className="mr-4 bg-blue-400/20 rounded-lg p-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -327,7 +338,7 @@ export default function Home() {
                   <span className="text-xs text-slate-300 uppercase font-medium">
                     Win Rate
                   </span>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-xl font-bold mt-0.5">
                     {winRate.toFixed(1)}%
                   </p>
                 </div>
@@ -336,11 +347,11 @@ export default function Home() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <div className="flex items-center">
-                <div className="mr-4 bg-violet-400/20 rounded-lg p-3">
+                <div className="mr-4 bg-violet-400/20 rounded-lg p-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -357,14 +368,42 @@ export default function Home() {
                   <span className="text-xs text-slate-300 uppercase font-medium">
                     Total Trades
                   </span>
-                  <p className="text-2xl font-bold mt-1">{allTrades.length}</p>
+                  <p className="text-xl font-bold mt-0.5">{allTrades.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="mr-4 bg-amber-400/20 rounded-lg p-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-amber-300"
+                  >
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-300 uppercase font-medium">
+                    Active Alerts
+                  </span>
+                  <p className="text-xl font-bold mt-0.5">{activeAlerts}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4 mt-8">
+          <div className="flex flex-wrap gap-4 mt-8">
             <Link
               href="/stocks"
               className="px-5 py-2.5 rounded-lg font-medium shadow-sm transition-all flex items-center bg-emerald-500 hover:bg-emerald-600 text-white"
@@ -408,6 +447,51 @@ export default function Home() {
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
               Trade History
+            </Link>
+
+            <Link
+              href="/alerts"
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium shadow-sm transition-all flex items-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Price Alerts
+            </Link>
+
+            <Link
+              href="/notifications"
+              className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium shadow-sm transition-all flex items-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-2"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              Notifications
             </Link>
           </div>
         </div>
@@ -520,6 +604,161 @@ export default function Home() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Alerts Summary */}
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-6 text-slate-800 flex items-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-2 text-amber-500"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              Active Price Alerts
+            </h2>
+
+            {alerts.filter((alert) => !alert.isTriggered).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mb-4 text-slate-400"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <h3 className="text-lg font-medium text-slate-700 mb-2">
+                  No Active Alerts
+                </h3>
+                <p className="text-slate-500 max-w-md">
+                  You don&apos;t have any active price alerts. Set up alerts to
+                  get notified when stocks hit your target prices.
+                </p>
+                <Link
+                  href="/alerts"
+                  className="mt-4 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium shadow-sm transition-all inline-flex items-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mr-2"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Create Alert
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th
+                        scope="col"
+                        className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+                      >
+                        Stock
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-4 text-right text-xs font-medium text-slate-500 uppercase tracking-wider"
+                      >
+                        Target Price
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+                      >
+                        Alert Type
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+                      >
+                        Created
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {alerts
+                      .filter((alert) => !alert.isTriggered)
+                      .slice(0, 5)
+                      .map((alert) => (
+                        <tr
+                          key={alert.id}
+                          className="hover:bg-slate-50 transition-colors"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-medium text-slate-800">
+                              {alert.stockSymbol}
+                            </div>
+                            <div className="text-sm text-slate-500">
+                              {alert.stockName}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="font-medium text-slate-700">
+                              ${alert.targetPrice.toFixed(2)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                alert.isAboveTarget
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-rose-100 text-rose-800"
+                              }`}
+                            >
+                              {alert.isAboveTarget ? "Above" : "Below"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-slate-600">
+                              {new Date(alert.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {alerts.filter((alert) => !alert.isTriggered).length > 5 && (
+                  <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-center">
+                    <Link
+                      href="/alerts"
+                      className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+                    >
+                      View all{" "}
+                      {alerts.filter((alert) => !alert.isTriggered).length}{" "}
+                      active alerts →
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
           </div>
