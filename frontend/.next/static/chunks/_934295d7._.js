@@ -5,9 +5,14 @@
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
+// frontend/src/lib/api.ts
 __turbopack_context__.s({
+    "createPriceAlert": (()=>createPriceAlert),
     "createTrade": (()=>createTrade),
+    "deletePriceAlert": (()=>deletePriceAlert),
     "deleteTrade": (()=>deleteTrade),
+    "getNotificationPreferences": (()=>getNotificationPreferences),
+    "getPriceAlerts": (()=>getPriceAlerts),
     "getStock": (()=>getStock),
     "getStockHistory": (()=>getStockHistory),
     "getStockPrices": (()=>getStockPrices),
@@ -18,9 +23,12 @@ __turbopack_context__.s({
     "logout": (()=>logout),
     "register": (()=>register),
     "sellTrade": (()=>sellTrade),
+    "sendTestNotification": (()=>sendTestNotification),
+    "updateNotificationPreferences": (()=>updateNotificationPreferences),
     "updateTrade": (()=>updateTrade)
 });
-const API_URL = "http://localhost:5000/api";
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
+const API_URL = ("TURBOPACK compile-time value", "http://localhost:5000/api");
 async function fetchWithAuth(url, options = {}) {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.token) {
@@ -176,6 +184,61 @@ async function deleteTrade(id) {
     });
     if (!response.ok) {
         throw new Error("Failed to delete trade");
+    }
+}
+async function getNotificationPreferences() {
+    const response = await fetchWithAuth(`${API_URL}/notifications/preferences`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch notification preferences");
+    }
+    return response.json();
+}
+async function updateNotificationPreferences(preferences) {
+    const response = await fetchWithAuth(`${API_URL}/notifications/preferences`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(preferences)
+    });
+    if (!response.ok) {
+        throw new Error("Failed to update notification preferences");
+    }
+}
+async function sendTestNotification() {
+    const response = await fetchWithAuth(`${API_URL}/notifications/test`, {
+        method: "POST"
+    });
+    if (!response.ok) {
+        throw new Error("Failed to send test notification");
+    }
+}
+async function getPriceAlerts() {
+    const response = await fetchWithAuth(`${API_URL}/pricealerts`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch price alerts");
+    }
+    return response.json();
+}
+async function createPriceAlert(alert) {
+    const response = await fetchWithAuth(`${API_URL}/pricealerts`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(alert)
+    });
+    if (!response.ok) {
+        throw new Error("Failed to create price alert");
+    }
+    return response.json();
+}
+async function deletePriceAlert(id) {
+    const response = await fetchWithAuth(`${API_URL}/pricealerts/${id}`, {
+        method: "DELETE"
+    });
+    if (!response.ok) {
+        throw new Error("Failed to delete price alert");
     }
 }
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {

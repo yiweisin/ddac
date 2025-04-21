@@ -13,9 +13,14 @@ module.exports = mod;
 
 var { g: global, __dirname } = __turbopack_context__;
 {
+// frontend/src/lib/api.ts
 __turbopack_context__.s({
+    "createPriceAlert": (()=>createPriceAlert),
     "createTrade": (()=>createTrade),
+    "deletePriceAlert": (()=>deletePriceAlert),
     "deleteTrade": (()=>deleteTrade),
+    "getNotificationPreferences": (()=>getNotificationPreferences),
+    "getPriceAlerts": (()=>getPriceAlerts),
     "getStock": (()=>getStock),
     "getStockHistory": (()=>getStockHistory),
     "getStockPrices": (()=>getStockPrices),
@@ -26,9 +31,11 @@ __turbopack_context__.s({
     "logout": (()=>logout),
     "register": (()=>register),
     "sellTrade": (()=>sellTrade),
+    "sendTestNotification": (()=>sendTestNotification),
+    "updateNotificationPreferences": (()=>updateNotificationPreferences),
     "updateTrade": (()=>updateTrade)
 });
-const API_URL = "http://localhost:5000/api";
+const API_URL = ("TURBOPACK compile-time value", "http://localhost:5000/api");
 async function fetchWithAuth(url, options = {}) {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.token) {
@@ -184,6 +191,61 @@ async function deleteTrade(id) {
     });
     if (!response.ok) {
         throw new Error("Failed to delete trade");
+    }
+}
+async function getNotificationPreferences() {
+    const response = await fetchWithAuth(`${API_URL}/notifications/preferences`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch notification preferences");
+    }
+    return response.json();
+}
+async function updateNotificationPreferences(preferences) {
+    const response = await fetchWithAuth(`${API_URL}/notifications/preferences`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(preferences)
+    });
+    if (!response.ok) {
+        throw new Error("Failed to update notification preferences");
+    }
+}
+async function sendTestNotification() {
+    const response = await fetchWithAuth(`${API_URL}/notifications/test`, {
+        method: "POST"
+    });
+    if (!response.ok) {
+        throw new Error("Failed to send test notification");
+    }
+}
+async function getPriceAlerts() {
+    const response = await fetchWithAuth(`${API_URL}/pricealerts`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch price alerts");
+    }
+    return response.json();
+}
+async function createPriceAlert(alert) {
+    const response = await fetchWithAuth(`${API_URL}/pricealerts`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(alert)
+    });
+    if (!response.ok) {
+        throw new Error("Failed to create price alert");
+    }
+    return response.json();
+}
+async function deletePriceAlert(id) {
+    const response = await fetchWithAuth(`${API_URL}/pricealerts/${id}`, {
+        method: "DELETE"
+    });
+    if (!response.ok) {
+        throw new Error("Failed to delete price alert");
     }
 }
 }}),

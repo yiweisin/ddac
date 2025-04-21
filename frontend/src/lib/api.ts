@@ -1,3 +1,4 @@
+// frontend/src/lib/api.ts
 import { LoginCredentials, User } from "../types/user";
 import { Stock } from "../types/stock";
 import {
@@ -6,6 +7,8 @@ import {
   UpdateTradeRequest,
   SellTradeRequest,
 } from "../types/trade";
+import { NotificationPreferences } from "../types/notification";
+import { PriceAlert, CreatePriceAlertRequest } from "../types/alert";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -113,7 +116,7 @@ export async function getStock(id: number): Promise<Stock> {
 }
 
 export async function getStockPrices(): Promise<
-  { id: number; symbol: string; price: number }[]
+  Array<{ id: number; symbol: string; price: number }>
 > {
   const response = await fetchWithAuth(`${API_URL}/stocks/prices`);
 
@@ -216,5 +219,81 @@ export async function deleteTrade(id: number): Promise<void> {
 
   if (!response.ok) {
     throw new Error("Failed to delete trade");
+  }
+}
+
+// Notifications API
+export async function getNotificationPreferences(): Promise<NotificationPreferences> {
+  const response = await fetchWithAuth(`${API_URL}/notifications/preferences`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch notification preferences");
+  }
+
+  return response.json();
+}
+
+export async function updateNotificationPreferences(
+  preferences: NotificationPreferences
+): Promise<void> {
+  const response = await fetchWithAuth(`${API_URL}/notifications/preferences`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(preferences),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update notification preferences");
+  }
+}
+
+export async function sendTestNotification(): Promise<void> {
+  const response = await fetchWithAuth(`${API_URL}/notifications/test`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to send test notification");
+  }
+}
+
+// Price Alerts API
+export async function getPriceAlerts(): Promise<PriceAlert[]> {
+  const response = await fetchWithAuth(`${API_URL}/pricealerts`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch price alerts");
+  }
+
+  return response.json();
+}
+
+export async function createPriceAlert(
+  alert: CreatePriceAlertRequest
+): Promise<PriceAlert> {
+  const response = await fetchWithAuth(`${API_URL}/pricealerts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(alert),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create price alert");
+  }
+
+  return response.json();
+}
+
+export async function deletePriceAlert(id: number): Promise<void> {
+  const response = await fetchWithAuth(`${API_URL}/pricealerts/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete price alert");
   }
 }

@@ -22,6 +22,48 @@ namespace backend.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("backend.Models.PriceAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
+
+                    b.Property<bool>("IsAboveTarget")
+                        .HasColumnType("boolean")
+                        .HasColumnName("isabovetarget");
+
+                    b.Property<bool>("IsTriggered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("istriggered");
+
+                    b.Property<int>("StockId")
+                        .HasColumnType("integer")
+                        .HasColumnName("stockid");
+
+                    b.Property<decimal>("TargetPrice")
+                        .HasColumnType("numeric")
+                        .HasColumnName("targetprice");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StockId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("pricealerts");
+                });
+
             modelBuilder.Entity("backend.Models.Stock", b =>
                 {
                     b.Property<int>("Id")
@@ -380,10 +422,34 @@ namespace backend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Email")
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("emailnotificationsenabled");
+
+                    b.Property<string>("EmailSubscriptionArn")
+                        .HasColumnType("text")
+                        .HasColumnName("emailsubscriptionarn");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("passwordhash");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("text")
+                        .HasColumnName("phonenumber");
+
+                    b.Property<bool>("SmsNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("smsnotificationsenabled");
+
+                    b.Property<string>("SmsSubscriptionArn")
+                        .HasColumnType("text")
+                        .HasColumnName("smssubscriptionarn");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -398,9 +464,30 @@ namespace backend.Migrations
                         new
                         {
                             Id = 1,
+                            EmailNotificationsEnabled = false,
                             PasswordHash = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+                            SmsNotificationsEnabled = false,
                             Username = "demo"
                         });
+                });
+
+            modelBuilder.Entity("backend.Models.PriceAlert", b =>
+                {
+                    b.HasOne("backend.Models.Stock", "Stock")
+                        .WithMany()
+                        .HasForeignKey("StockId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Stock");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("backend.Models.TradeHistory", b =>
