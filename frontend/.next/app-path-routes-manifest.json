@@ -1,0 +1,11 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/",
+  "/stocks/[id]/page": "/stocks/[id]",
+  "/login/page": "/login",
+  "/register/page": "/register",
+  "/stocks/page": "/stocks",
+  "/trades/page": "/trades",
+  "/profile/page": "/profile"
+}
