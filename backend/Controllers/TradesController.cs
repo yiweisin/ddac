@@ -126,12 +126,12 @@ namespace backend.Controllers
             
             // Send notification about new trade
             var user = await _context.Users.FindAsync(userId);
-            if (user != null && (user.EmailNotificationsEnabled || user.SmsNotificationsEnabled))
+            if (user != null && user.EmailNotificationsEnabled && !string.IsNullOrEmpty(user.Email))
             {
                 string message = $"You have successfully purchased {trade.Stock?.Symbol} at ${trade.EntryPrice}.";
                 string subject = $"New Trade: {trade.Stock?.Symbol} Purchased";
                 
-                await _notificationService.PublishMessageAsync(message, subject);
+                await _notificationService.PublishMessageAsync(message, subject, "trade");
             }
             
             return CreatedAtAction(nameof(GetTrade), new { id = trade.Id }, response);
@@ -162,13 +162,13 @@ namespace backend.Controllers
             if (wasPreviouslyHolding && !trade.IsHolding)
             {
                 var user = await _context.Users.FindAsync(userId);
-                if (user != null && (user.EmailNotificationsEnabled || user.SmsNotificationsEnabled))
+                if (user != null && user.EmailNotificationsEnabled && !string.IsNullOrEmpty(user.Email))
                 {
                     string profitOrLoss = trade.PNL >= 0 ? "profit" : "loss";
                     string message = $"You have sold {trade.Stock?.Symbol} with a {profitOrLoss} of ${Math.Abs(trade.PNL)}.";
                     string subject = $"Trade Closed: {trade.Stock?.Symbol} Sold";
                     
-                    await _notificationService.PublishMessageAsync(message, subject);
+                    await _notificationService.PublishMessageAsync(message, subject, "trade");
                 }
             }
             

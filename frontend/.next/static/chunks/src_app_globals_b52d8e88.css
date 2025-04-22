@@ -1147,10 +1147,6 @@
     background-color: var(--color-slate-700);
   }
 
-  .bg-slate-700\/50 {
-    background-color: color-mix(in oklab, var(--color-slate-700) 50%, transparent);
-  }
-
   .bg-violet-400 {
     background-color: var(--color-violet-400);
   }
@@ -1694,16 +1690,6 @@
     }
   }
 
-  .placeholder\:text-slate-400::placeholder {
-    color: var(--color-slate-400);
-  }
-
-  @media (hover: hover) {
-    .hover\:border-indigo-500:hover {
-      border-color: var(--color-indigo-500);
-    }
-  }
-
   @media (hover: hover) {
     .hover\:bg-amber-600:hover {
       background-color: var(--color-amber-600);
@@ -1812,13 +1798,6 @@
     }
   }
 
-  @media (hover: hover) {
-    .hover\:shadow-lg:hover {
-      --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, #0000001a), 0 4px 6px -4px var(--tw-shadow-color, #0000001a);
-      box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    }
-  }
-
   .focus\:border-indigo-500:focus {
     border-color: var(--color-indigo-500);
   }
@@ -1878,12 +1857,6 @@
   }
 
   @media (width >= 48rem) {
-    .md\:w-96 {
-      width: calc(var(--spacing) * 96);
-    }
-  }
-
-  @media (width >= 48rem) {
     .md\:translate-x-0 {
       --tw-translate-x: calc(var(--spacing) * 0);
       translate: var(--tw-translate-x) var(--tw-translate-y);
@@ -1911,12 +1884,6 @@
   @media (width >= 48rem) {
     .md\:grid-cols-5 {
       grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-  }
-
-  @media (width >= 64rem) {
-    .lg\:grid-cols-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 }

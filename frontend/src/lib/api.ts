@@ -245,7 +245,20 @@ export async function updateNotificationPreferences(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update notification preferences");
+    let errorMessage = "Failed to update notification preferences";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // If parsing JSON fails, use response text
+      try {
+        errorMessage = (await response.text()) || errorMessage;
+      } catch (e) {
+        // If reading text fails, keep the default error message
+      }
+    }
+    console.error("API Error:", errorMessage);
+    throw new Error(errorMessage);
   }
 }
 
@@ -255,7 +268,20 @@ export async function sendTestNotification(): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to send test notification");
+    let errorMessage = "Failed to send test notification";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // If parsing JSON fails, use response text
+      try {
+        errorMessage = (await response.text()) || errorMessage;
+      } catch (e) {
+        // If reading text fails, keep the default error message
+      }
+    }
+    console.error("API Error:", errorMessage);
+    throw new Error(errorMessage);
   }
 }
 
